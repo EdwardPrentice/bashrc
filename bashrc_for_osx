@@ -1,0 +1,135 @@
+#!/bin/bash -eu
+
+# If not interactive, then do nothing
+[ -z "$PS1" ] && return
+
+# The location of this file
+BASHRC="$HOME/.bashrc"
+
+# For completeness this file is included. Is this in darwin somewhere already?
+COLORS_FILE="$HOME/.colors"
+if [ -f $COLORS_FILE ]; then
+    source $COLORS_FILE
+fi
+
+# A simple hook to allow more secret, user specific bashrc behaviour
+PERSONAL_BASHRC="$HOME/.$(whoami)_bashrc"
+if [ -f $PERSONAL_BASHRC ]; then
+    source $PERSONAL_BASHRC
+fi
+
+EDITOR=vim
+
+VIMRC="$HOME/.vimrc"
+SSHRC="$HOME/.sshrc"
+
+# Single letter aliases for editing common configuration files
+alias b="$EDITOR $BASHRC && source $BASHRC"
+alias bb="$EDITOR $PERSONAL_BASHRC && source $PERSONAL_BASHRC"
+alias c="$EDITOR $COLORS_FILE && source $BASHRC"
+alias v="$EDITOR $VIMRC"
+alias s="$EDITOR $SSHRC"
+alias g="git config --global -e"
+
+# Simple git aliases. Are these too user specific?
+alias gs="git status"
+alias gca="git commit --all"
+alias gp="git push"
+alias gl="git --no-pager log -12 --pretty=tformat:'%C(yellow)%h%Cred%d %Creset%s%Cblue [%cn]' --decorate --graph"
+alias gd="git diff"
+
+# This tells ls to always produce colorized output. Useful when piping it to grep on the commandline
+export LSCOLOR_FORCE=
+
+alias grep="grep --color"
+
+alias ls="ls -AlFCG"
+alias sl="ls"
+alias ll="ls -al"
+export LSCOLORS="fxfxcxdxbxegedabagacad"
+
+# If cat its because the file didn't exist, it doesn't need to tell us that
+alias cat="cat 2>/dev/null"
+
+# Get access to __git_ps1
+if [ -f "$(brew --prefix)/etc/bash_completion.d/git-prompt.sh" ]; then
+    source "$(brew --prefix)/etc/bash_completion.d/git-prompt.sh"
+fi
+
+function __git_sha1 {
+    echo $(git rev-parse --short HEAD)
+}
+
+# Configure history
+# This is commented out as it throws off the history number in the command prompt
+#export HISTCONTROL=ignoredups:erasedups # no duplicate entries
+export HISTSIZE=100000                   # big big history
+export HISTFILESIZE=100000               # big big history
+shopt -s histappend                      # append to history, don't overwrite it
+
+# Toggle hidden files in Finder
+function hidden_files_show {
+    defaults write com.apple.Finder AppleShowAllFiles YES
+    killall Finder
+}
+
+function hidden_files_hide {
+    defaults write com.apple.Finder AppleShowAllFiles NO
+    killall Finder
+}
+
+# Configure a powerful prompt with the following features
+## Write to the history file after every command
+## Contains history number
+## If a command fails, the prompt will go red, if not, it will be green
+## Contains branch name
+## Contains commit hash
+PROMPT_COMMAND='
+
+# Save this before its overridden
+RET=$?
+
+history -a
+
+# Initialise to nothing, so all of this is idempotent
+PS1=""
+
+# Add the history number to the beginning
+PS1+="$White[\!]$NoColor"
+
+# Using the return code of the previous command, color the prompt red or green
+# Protip: This is so useful and now I cant live without it
+PS1+="$(
+    if [ $RET -eq 0 ];
+        then echo $Green;
+        else echo $Red;
+    fi
+)"
+
+# The actual contents of the prompt. See http://ss64.com/bash/syntax-prompt.html
+PS1+=" \u \w "
+
+# Add git info into the command prompt
+PS1+="$(
+git branch 1>/dev/null 2>&1;
+if [ $? -eq 0 ]; then
+    git status | grep "nothing to commit" 1>/dev/null 2>&1;
+    if [ $? -eq 0 ]; then
+        echo -n $Green
+    else
+        echo -n $Yellow
+    fi
+    echo [$(__git_ps1 %s) $(__git_sha1)];
+fi
+)"
+
+# Add more prompt contents here
+
+PS1+=" $ "
+
+# Terminate the color block
+PS1+="$NoColor"
+
+'
+export PS1
+
