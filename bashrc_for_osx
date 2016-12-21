@@ -4,7 +4,7 @@
 [ -z "$PS1" ] && return
 
 # The location of this file
-BASHRC="$HOME/.bashrc"
+export BASHRC="$HOME/.bashrc"
 
 # For completeness this file is included. Is this in darwin somewhere already?
 COLORS_FILE="$HOME/.colors"
