@@ -133,3 +133,8 @@ PS1+="$NoColor"
 '
 export PS1
 
+# Simple function for displaying external ip address
+# Could be improved to handle ipecho.net being unavailable
+function ip {
+    curl ipecho.net/plain ; echo
+}
